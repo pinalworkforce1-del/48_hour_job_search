@@ -299,6 +299,20 @@ body{font-size:16px}
   const LEGACY_PATHWAY_KEY='boostPathwaysV28';
   let state={values:{},lists:{skills:['','',''],accomplishments:['',''],contacts:['','','','',''],employers:['','','']},checks:{},phases:{},activities:{pitch:false,mistakes:false,plan:false},mistakeIndex:0,mistakeDone:[false,false,false,false,false],completed:false,planTasks:{}};
   try{const saved=JSON.parse(localStorage.getItem(MODULE_KEY)||'null');if(saved)state={...state,...saved,values:{...state.values,...(saved.values||{})},lists:{...state.lists,...(saved.lists||{})},checks:{...state.checks,...(saved.checks||{})},phases:{...state.phases,...(saved.phases||{})},activities:{...state.activities,...(saved.activities||{})},planTasks:{...(saved.planTasks||{})}}}catch(e){}
+  // On return from BOOST, restore the saved draft when the browser-only module state is absent.
+  try{
+    const journey=JSON.parse(localStorage.getItem(JOURNEY_KEY)||'{}');
+    const draft=journey.modules?.jobsearchDraft?.state;
+    const hasWork=Object.values(state.phases||{}).some(Boolean)||
+      Object.values(state.values||{}).some(v=>String(v||'').trim())||
+      Object.values(state.lists||{}).some(v=>Array.isArray(v)&&v.some(x=>String(x||'').trim()));
+    if(!hasWork&&draft?.values&&draft?.lists){
+      state={...state,...draft,values:{...state.values,...draft.values},lists:{...state.lists,...draft.lists},
+        phases:{...state.phases,...(draft.phases||{})},activities:{...state.activities,...(draft.activities||{})},
+        planTasks:{...state.planTasks,...(draft.planTasks||{})}};
+      localStorage.setItem(MODULE_KEY,JSON.stringify(state));
+    }
+  }catch(err){console.warn('BOOST draft restoration unavailable',err)}
   const toast=document.querySelector('.toast');let toastTimer;
   function showToast(msg){clearTimeout(toastTimer);toast.textContent=msg;toast.classList.add('show');toastTimer=setTimeout(()=>toast.classList.remove('show'),2300)}
   function readJourney(){try{return JSON.parse(localStorage.getItem(JOURNEY_KEY)||'{}')||{}}catch{return{}}}
