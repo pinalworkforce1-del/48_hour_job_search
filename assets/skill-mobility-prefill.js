@@ -36,6 +36,18 @@ function prefillSkills(){
  for(const input of inputs){if(input.value.trim())continue;const next=candidates.find(x=>!used.has(norm(x)));if(!next)break;input.value=next;used.add(norm(next));input.dispatchEvent(new Event('input',{bubbles:true}));filled++}
  addCarryForwardNote(inputs,filled,candidates.length);
 }
+function prefillIdentity(){
+ const j=read(JOURNEY_KEY,{}),rapid=j.modules?.['rapid-discover']||{},mobility=j.modules?.skillmobility||{},job=read(JOB_KEY,{});
+ const name=String(j.participant?.name||j.participant_name||'').trim();
+ const target=String(mobility.considerations?.[0]?.title||mobility.priorOccupation||rapid.priorOccupation||'').trim();
+ for(const [key,value] of [['participantName',name],['targetRole',target]]){
+  const field=document.querySelector('[data-save="'+key+'"]');
+  if(field&&!field.value.trim()&&!String(job.values?.[key]||'').trim()&&value){
+   field.value=value;
+   field.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+ }
+}
 function saveJobSearchJourney(){
  const job=read(JOB_KEY,null);if(!job?.completed)return;
  const j=read(JOURNEY_KEY,{}),now=new Date().toISOString();j.schema_version=Math.max(Number(j.schema_version)||0,2);j.region=j.region||'Pinal County';j.modules=j.modules||{};j.progress=j.progress||{};
@@ -43,7 +55,7 @@ function saveJobSearchJourney(){
  j.progress[MODULE]='complete';j.updated_at=now;localStorage.setItem(JOURNEY_KEY,JSON.stringify(j));
 }
 function install(){
- setTimeout(prefillSkills,40);
+ setTimeout(()=>{prefillIdentity();prefillSkills()},80);
  const finish=document.querySelector('[data-finish]');if(finish)finish.addEventListener('click',()=>setTimeout(saveJobSearchJourney,180));
  if(read(JOB_KEY,{}).completed)saveJobSearchJourney();
 }
