@@ -54,8 +54,25 @@ function saveJobSearchJourney(){
  j.modules[MODULE]={module:MODULE,source:'boost_48_hour_job_search',version:12,completedAt:now,targetRole:String(job.values?.targetRole||'').trim()||null,skills:(job.lists?.skills||[]).filter(Boolean),accomplishments:(job.lists?.accomplishments||[]).filter(Boolean),targetEmployers:(job.lists?.employers||[]).filter(Boolean),contacts:(job.lists?.contacts||[]).filter(Boolean),phases:job.phases||{},activities:job.activities||{},commitment:String(job.values?.commitment||'').trim()||null};
  j.progress[MODULE]='complete';j.updated_at=now;localStorage.setItem(JOURNEY_KEY,JSON.stringify(j));
 }
+function prefillFromPortalHandoff(){
+ let packet=null;
+ try{const hash=new URLSearchParams(location.hash.replace(/^#/,''));packet=JSON.parse(hash.get('boost_prefill')||'null')}catch{}
+ if(!packet||typeof packet!=='object')return;
+ const job=read(JOB_KEY,{});
+ for(const [key,value] of [['participantName',packet.name],['targetRole',packet.target]]){
+  const field=document.querySelector('[data-save="'+key+'"]');
+  if(field&&!field.value.trim()&&!String(job.values?.[key]||'').trim()&&typeof value==='string'&&value.trim()){
+   field.value=value.slice(0,120);field.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+ }
+ const inputs=[...document.querySelectorAll('input[data-list="skills"]')].sort((a,b)=>Number(a.dataset.index)-Number(b.dataset.index));
+ const skills=Array.isArray(packet.skills)?packet.skills.filter(x=>typeof x==='string'&&x.trim()).slice(0,3):[];
+ inputs.forEach((el,i)=>{if(!el.value.trim()&&skills[i]){el.value=skills[i].slice(0,100);el.dispatchEvent(new Event('input',{bubbles:true}))}});
+ // Remove the fragment after successful local capture; subsequent revisits use saved fields.
+ history.replaceState(null,'',location.pathname+location.search);
+}
 function install(){
- setTimeout(()=>{prefillIdentity();prefillSkills()},80);
+ setTimeout(()=>{prefillFromPortalHandoff();prefillIdentity();prefillSkills()},80);
  const finish=document.querySelector('[data-finish]');if(finish)finish.addEventListener('click',()=>setTimeout(saveJobSearchJourney,180));
  if(read(JOB_KEY,{}).completed)saveJobSearchJourney();
 }
