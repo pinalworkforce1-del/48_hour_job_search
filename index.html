@@ -361,6 +361,40 @@ function boostOfferCompletion(moduleId,mount){
 }
 
 </script>
-<script src="assets/skill-mobility-prefill.js?v=20261031c"></script>
+<script>
+(function(){
+  // Same-origin BOOST-to-48-hour carry-forward. Does not change completed work.
+  function fill(){
+    const read=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')||{}}catch{return {}}};
+    const j=read('pinal_boost_journey_v1'), m=j.modules?.skillmobility||{},
+      d=j.modules?.['rapid-discover']||{}, existing=read('boost48JobSearchV11');
+    let packet={};
+    try{packet=JSON.parse(new URLSearchParams(location.hash.replace(/^#/,'')).get('boost_prefill')||'null')||{}}catch{}
+    const candidateName=packet.name||j.participant?.name||j.participant_name||'';
+    const candidateRole=packet.target||m.considerations?.[0]?.title||m.priorOccupation||d.priorOccupation||'';
+    const labels={customer:'Customer service',numbers:'Handling transactions and numbers',people:'Working with people',detail:'Attention to detail',adapt:'Adaptability',adaptability:'Adaptability',teamwork:'Teamwork and collaboration',accuracy:'Accuracy and quality',communication:'Communication',problem:'Problem solving',digital:'Digital skills',lead:'Leadership',hands:'Hands-on work'};
+    const raw=packet.skills?.length?packet.skills:[...(m.confirmedSkills||[]),...(m.confirmedPriorSkillIds||[])];
+    const skills=[...new Set(raw.map(x=>typeof x==='string'?x:(x?.label||x?.name||'')).map(x=>labels[x]||x).filter(Boolean))].slice(0,3);
+    let filled=0;
+    function put(selector,value,saved){
+      const el=document.querySelector(selector);
+      if(el&&value&&!el.value.trim()&&!saved){el.value=String(value);el.dispatchEvent(new Event('input',{bubbles:true}));filled++;}
+    }
+    put('[data-save="participantName"]',candidateName,existing.values?.participantName);
+    put('[data-save="targetRole"]',candidateRole,existing.values?.targetRole);
+    skills.forEach((skill,i)=>put('input[data-list="skills"][data-index="'+i+'"]',skill,existing.lists?.skills?.[i]));
+    const host=document.querySelector('input[data-list="skills"][data-index="2"]');
+    if(host&&!document.getElementById('boostCarryStatus')){
+      const status=document.createElement('p');
+      status.id='boostCarryStatus';status.style.cssText='font-size:.82rem;margin:10px 0;color:#285d75';
+      status.textContent=filled?'BOOST carried forward '+filled+' saved detail'+(filled===1?'':'s')+'. You can edit any of them.':(candidateRole||skills.length||candidateName)?'BOOST career details found; your existing entries were preserved.':'No prior BOOST career details found on this device. You can enter these fields manually.';
+      host.parentElement?.append(status);
+    }
+    if(packet.name||packet.target||packet.skills?.length)history.replaceState(null,'',location.pathname+location.search);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(fill,60),{once:true});else setTimeout(fill,60);
+})();
+</script>
+<script src="assets/skill-mobility-prefill.js?v=20261031d"></script>
 </body>
 </html>
