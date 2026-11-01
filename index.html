@@ -327,14 +327,40 @@ body{font-size:16px}
     const resume=[val('resumeAction'),val('resumeWork'),val('resumeResult')].filter(Boolean).join(' ');const pitch=[val('pitchWho'),val('pitchBest'),val('pitchLooking'),val('pitchAsk')].filter(Boolean).join(' ');
     const phasesDone=[1,2,3,4].filter(p=>state.phases[p]).length;const any=Object.keys(state.values).some(k=>val(k))||skills.length||contacts.length||emps.length||phasesDone;
     if(!any)return '<div class="plan-empty">Complete the activities above and your personalized plan will appear here.</div>';
-    const li=arr=>arr.length?arr.map(x=>`<li>${escapeHtml(x)}</li>`).join(''):'<li>Add this item before you leave the module.</li>';
-    return `<div class="plan-title"><h3>${escapeHtml(name)} — My 48-Hour Job Search Plan</h3><p>Target: ${escapeHtml(role)} • ${phasesDone} of 4 phases marked complete</p></div>
-      <div class="plan-phase"><h4>Hours 0–8 — Mindset & Inventory</h4><ul><li>Action start: ${escapeHtml(val('actionStart')||'Choose a time to shift into action mode.')}</li><li>Skills: ${escapeHtml(skills.join(', ')||'Add three transferable skills.')}</li>${acc.length?`<li>Accomplishments: ${escapeHtml(acc.join(' • '))}</li>`:''}<li>First contacts:</li>${li(contacts.slice(0,5))}</ul></div>
-      <div class="plan-phase"><h4>Hours 8–20 — Resume & Digital Presence</h4><ul><li>Accomplishment statement: ${escapeHtml(resume||'Build one targeted accomplishment statement.')}</li><li>Target employers:</li>${li(emps)}</ul></div>
-      <div class="plan-phase"><h4>Hours 20–36 — Outreach Blitz</h4><ul><li>Contact first: ${escapeHtml(val('outreachName')||contacts[0]||'Choose one trusted contact.')}</li><li>Specific ask: ${escapeHtml(val('outreachAsk')||'Ask for perspective or a short conversation.')}</li><li>Recruiter / staffing contact: ${escapeHtml(val('recruiterTarget')||'Identify one recruiter, staffing firm, or workforce contact.')}</li></ul></div>
-      <div class="plan-phase"><h4>Hours 36–48 — Follow-Up & Systems</h4><ul><li>First tracker row: ${escapeHtml([val('trackCompany'),val('trackRole'),val('trackContact')].filter(Boolean).join(' — ')||'Add your first company / role / contact.')}</li><li>Follow-up date: ${escapeHtml(val('trackFollow')||'Choose a follow-up date.')}</li><li>Daily routine: ${escapeHtml(val('dailyRoutine')||val('routineCustom')||'Choose a sustainable daily search block.')}</li><li>Weekly goals: ${escapeHtml(`${val('weeklyApps')||'—'} targeted applications • ${val('weeklyConvos')||'—'} conversations • ${val('weeklyLearning')||'—'} learning activities`)}</li><li>Accountability: ${escapeHtml(val('accountability')||'Add an accountability person or method.')}</li></ul></div>
-      <div class="plan-phase"><h4>My Networking Introduction</h4><ul><li>${escapeHtml(pitch||'Build your four-part networking introduction.')}</li></ul></div>
-      <div class="plan-phase"><h4>My Next 24 Hours</h4><ul><li>${escapeHtml(val('commitment')||'Write one specific action you will complete in the next 24 hours.')}</li></ul></div>`;
+    const show=(v,fallback)=>escapeHtml(String(v||fallback));
+    const items=arr=>arr.length?arr.map(x=>'<li>'+escapeHtml(x)+'</li>').join(''):'';
+    const phase=(title,purpose,tasks)=>'<div class="plan-phase"><h4>'+title+'</h4><p style="font-size:1rem;line-height:1.55;margin:7px 0 10px">'+purpose+'</p><ol style="padding-left:24px;font-size:.98rem;line-height:1.65">'+tasks.map(x=>'<li style="margin-bottom:9px">'+x+'</li>').join('')+'</ol></div>';
+    const kickoff=val('actionStart')||'Choose a specific starting time today or tomorrow.';
+    const selectedSkills=skills.length?skills.slice(0,3).join(', '):'choose three strengths you can show an employer';
+    const targetEmployers=emps.length?emps.join(', '):'identify three employers hiring for '+role;
+    const people=contacts.length?contacts.slice(0,3).join(', '):'identify three people you can contact';
+    const resumeBullet=resume||'Write one accomplishment using an action, what you did, and a result; use a real number only when available';
+    const firstContact=val('outreachName')||contacts[0]||'your first professional contact';
+    const ask=val('outreachAsk')||'ask about openings, referrals, or an introduction';
+    const tracking=[val('trackCompany'),val('trackRole'),val('trackContact')].filter(Boolean).join(' — ')||'the first employer and position you contact';
+    return '<div class="plan-title"><h3>'+escapeHtml(name)+' — My 48-Hour Job Search Action Plan</h3><p><strong>Target occupation:</strong> '+escapeHtml(role)+' · '+phasesDone+' of 4 preparation phases completed</p><p style="margin-top:6px">Start: '+show(kickoff,'Set a start time')+'. Work through the actions below over your first 48 hours.</p></div>'+
+      phase('Hours 0–8 — Get organized and ready','Start at your committed time. Gather what you already know, identify people who can help, and set your immediate job-search direction.',[
+        '<strong>At the start:</strong> '+show(kickoff,'Set a definite starting time')+'. Put the next eight hours on your calendar.',
+        '<strong>During the first two hours:</strong> Prepare three skills you can discuss in an interview: '+escapeHtml(selectedSkills)+'. '+(acc.length?'Use these accomplishments as evidence: '+escapeHtml(acc.join(' • '))+'.':'Add two real accomplishments that demonstrate your strengths.'),
+        '<strong>Before hour 8:</strong> Make a contact list: '+escapeHtml(people)+'. Decide who to approach first and why.'
+      ])+
+      phase('Hours 8–20 — Prepare materials and shortlist jobs','Turn your experience into a résumé employers can scan quickly, review your online information, and locate openings worth pursuing.',[
+        '<strong>Hours 8–11:</strong> Update your résumé contact information and tailor it for '+escapeHtml(role)+'. Your accomplishment bullet: '+escapeHtml(resumeBullet)+'.',
+        '<strong>Hours 11–14:</strong> Check your online profile, dates, job titles, and public-facing information for consistency.',
+        '<strong>Hours 14–20:</strong> Search openings at '+escapeHtml(targetEmployers)+'. Save links, check pay and commute, and select the best-fit positions for applications.'
+      ])+
+      phase('Hours 20–36 — Apply and make connections','Focus on quality applications and direct outreach rather than simply sending as many applications as possible.',[
+        '<strong>Hours 20–27:</strong> Submit tailored applications to your best-fit openings and record the employer, role, date and next action.',
+        '<strong>Hours 27–31:</strong> Contact '+escapeHtml(firstContact)+' and '+escapeHtml(people)+'. Your ask: '+escapeHtml(ask)+'.',
+        '<strong>Hours 31–36:</strong> Reach out to '+show(val('recruiterTarget'),'a recruiter, staffing agency, or your career coach')+'. Practice and use this introduction: '+show(pitch,'I have experience in this work, I am seeking a matching role, and I would appreciate a hiring lead or introduction')+'.'
+      ])+
+      phase('Hours 36–48 — Track, follow up, and commit','Build a simple repeatable system to maintain momentum after your first two days.',[
+        '<strong>Hours 36–40:</strong> Start your application tracker with '+escapeHtml(tracking)+'. Include the application date, employer contact and next follow-up.',
+        '<strong>Hours 40–44:</strong> Plan your next follow-up for '+show(val('trackFollow'),'a realistic date after applying')+'. Review responses and any hiring barriers.',
+        '<strong>Hours 44–48:</strong> Set a sustainable daily routine: '+show(val('dailyRoutine')||val('routineCustom'),'a daily block for applications, networking and résumé improvement')+'. Your weekly targets: '+show(val('weeklyApps'),'set a target number of')+' targeted applications, '+show(val('weeklyConvos'),'set a target number of')+' conversations, and '+show(val('weeklyLearning'),'set a target number of')+' learning actions.',
+        '<strong>Before you finish:</strong> Arrange accountability with '+show(val('accountability'),'a career coach or trusted contact')+'.'
+      ])+
+      '<div class="plan-phase"><h4>My first action in the next 24 hours</h4><p style="font-size:1rem;line-height:1.6"><strong>'+show(val('commitment'),'Write one specific, time-bound action before finishing your plan.')+'</strong></p><p>When you complete it, record the outcome and decide your next action.</p></div>';
   }
   function updateProgress(){const phaseCount=[1,2,3,4].filter(p=>state.phases[p]).length;const extras=(state.activities.pitch?1:0)+(state.activities.mistakes?1:0)+(state.completed?1:0);const count=phaseCount+extras,total=7;document.querySelector('[data-progress-fill]').style.width=`${count/total*100}%`;document.querySelector('[data-progress-count]').textContent=`${count} of ${total} activities complete`;document.querySelector('[data-progress-title]').textContent=state.completed?'Plan complete • Start your 48 hours':phaseCount<4?`Build your plan • Phase ${Math.min(phaseCount+1,4)} of 4`:'Finish your networking introduction and challenge';document.querySelectorAll('[data-phase]').forEach(sec=>{const p=sec.dataset.phase,done=!!state.phases[p];sec.classList.toggle('is-complete',done);sec.querySelector('[data-status]').textContent=done?'Complete ✓':'Not complete'});document.querySelector('[data-completion]').classList.toggle('show',!!state.completed)}
   function updateAll(){updatePreviews();updateProgress();document.querySelector('[data-plan-output]').innerHTML=makePlan();renderMistake()}
