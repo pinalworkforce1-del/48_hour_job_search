@@ -51,6 +51,17 @@ a{color:inherit}
 @media(max-width:900px){.hero{grid-template-columns:1fr}.rosie{min-height:330px}.rosie img{width:auto;max-width:100%;max-height:360px}.hero-copy{padding:22px}.speech:before{display:none}.roadmap{grid-template-columns:1fr 1fr}.lesson-grid,.pitch-layout{grid-template-columns:1fr}.mistake-grid{grid-template-columns:1fr 1fr 1fr}.topbar-inner{grid-template-columns:auto 1fr}.toplink{display:none}}
 @media(max-width:620px){.shell{padding:12px 9px 52px}.hero{border-radius:16px}.roadmap,.field-grid{grid-template-columns:1fr}.mistake-grid{grid-template-columns:1fr 1fr}.lesson-head{grid-template-columns:auto 1fr}.status-pill{grid-column:1/-1;justify-self:start}.lesson-body,.pitch-card,.mistakes-card,.plan-card{padding:14px}.hero h1{font-size:2.4rem}.topbar-inner{padding:9px 10px}.phase-badge{width:48px;height:48px}}
 @media print{body{background:#fff}.topbar,.hero,.setup-card,.roadmap,.lesson,.pitch-card,.mistakes-card,.section-head,.footer,.toast,.plan-toolbar,.final-actions,.completion-banner{display:none!important}.shell{max-width:none;padding:0}.plan-card{display:block!important;box-shadow:none;border:0;padding:0}.plan-output{border:0}.plan-title{-webkit-print-color-adjust:exact;print-color-adjust:exact}.plan-phase{break-inside:avoid}}
+
+/* Readability: improve small instructional copy without changing the module layout. */
+body{font-size:16px}
+.activity p,.lesson-head p,.lesson-body p,.sub,.section-head p,.setup-card p{font-size:1rem;line-height:1.6}
+.activity h4{font-size:1.15rem;line-height:1.35}
+.activity label,.activity .field label,.checklist label,.check,.field label{font-size:.98rem;line-height:1.5}
+.activity input,.activity textarea,.activity select,.field input,.field textarea,.field select{font-size:1rem}
+.activity .preview,.activity .hint,.activity small,.lesson-body small{font-size:.9rem;line-height:1.5}
+.rosie-coach-card p,.rosie-coach-card .eyebrow{font-size:.93rem}
+.phase-actions .btn,.activity .btn{font-size:1rem}
+@media(max-width:620px){.activity p,.lesson-body p{font-size:.98rem}.activity label,.checklist label{font-size:.96rem}}
 </style>
 </head>
 <body>
