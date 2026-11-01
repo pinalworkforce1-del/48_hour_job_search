@@ -78,6 +78,8 @@ body{font-size:16px}
 .action-track select,.action-track input{min-width:0;width:100%;padding:7px;border:1px solid #b8cbd7;border-radius:7px;font-size:.9rem;background:white}
 @media(max-width:720px){.action-header{display:none}.action-row{grid-template-columns:1fr;gap:8px}.action-who:before{content:'Who / where: ';font-weight:850}.action-track{grid-template-columns:1fr 1fr}}
 @media print{.action-track select,.action-track input{border:1px solid #aabac6}.action-row{break-inside:avoid}.action-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.plan-output.checklist-collapsed,.plan-toolbar.checklist-collapsed{display:none}
+@media print{.plan-output.checklist-collapsed{display:block!important}}
 </style>
 </head>
 <body>
@@ -281,11 +283,11 @@ body{font-size:16px}
           <div class="caption-tools"><button class="caption-toggle is-on" type="button" data-caption-toggle aria-pressed="true">CC On</button><div class="caption-live" data-caption-output aria-live="polite"></div></div>
         </div>
       </div>
-    <div class="plan-toolbar"><button class="btn ghost" type="button" data-copy-plan>Copy Plan</button><button class="btn ghost" type="button" data-print>Print / Save PDF</button></div>
-    <div class="plan-output" data-plan-output><div class="plan-empty">Complete the activities above and your personalized plan will appear here.</div></div>
+    <div class="plan-toolbar checklist-collapsed"><button class="btn ghost" type="button" data-copy-plan>Copy Plan</button><button class="btn ghost" type="button" data-print>Print / Save PDF</button></div>
+    <div class="plan-output checklist-collapsed" data-plan-output><div class="plan-empty">Complete the activities above and your personalized plan will appear here.</div></div>
     <div class="commit-box"><strong>My next 24-hour commitment:</strong><div class="field" style="margin-top:8px"><input id="commitment" data-save="commitment" placeholder="Example: Rewrite my top three résumé bullets by 7 PM tonight"></div></div>
-    <div class="final-actions"><button class="btn secondary" type="button" data-save-stay>Save Progress &amp; Stay Here</button><button class="btn secondary" type="button" data-save-return>Save Progress &amp; Return to BOOST</button><button class="btn secondary" type="button" data-view-checklist>View My 48-Hour Checklist</button><button class="btn" type="button" data-finish style="background:#177a45;color:#fff;border-color:#126137">Complete 48 Hours &amp; Return to BOOST</button><button class="btn ghost" type="button" data-reset>Restart This Module</button></div><p class="save-note" data-save-feedback role="status" aria-live="polite">Progress saves automatically on this browser. Use either Save Progress button to preserve a draft without marking this module complete.</p>
-    <div class="completion-banner" data-completion>48-Hour planning module complete. Keep using your checklist and discuss progress or assistance needs with your coach.</div>
+    <div class="final-actions"><button class="btn secondary" type="button" data-save-stay>Save Progress &amp; Stay Here</button><button class="btn secondary" type="button" data-save-return>Save Progress &amp; Return to BOOST</button><button class="btn secondary" type="button" data-view-checklist hidden aria-expanded="false">View My 48-Hour Checklist</button><button class="btn" type="button" data-finish style="background:#177a45;color:#fff;border-color:#126137">Complete Module &amp; Return to BOOST</button><button class="btn ghost" type="button" data-reset>Restart This Module</button></div><p class="save-note" data-save-feedback role="status" aria-live="polite">Progress saves automatically on this browser. Use either Save Progress button to preserve a draft without marking this module complete.</p>
+    <div class="completion-banner" data-completion>Your 48-Hour Job Search Plan is ready. You can keep working on the checklist and review your progress or assistance needs with your coach.</div>
   </section>
 
   <div class="footer">BOOST • 48-Hour Job Search Strategy • Rosie Guided<br>This lesson turns the original facilitator content into an active participant plan. Use your Career Coach, workforce staff, and trusted contacts as part of the process.</div>
@@ -293,6 +295,7 @@ body{font-size:16px}
 <div class="toast" role="status" aria-live="polite"></div>
 <script>
 (() => {
+  let checklistOpen=false;
   const MODULE_KEY='boost48JobSearchV11';
   const JOURNEY_KEY='pinal_boost_journey_v1';
   const PATHWAY_KEY='boostPathwaysV29';
@@ -401,10 +404,56 @@ body{font-size:16px}
   });
 
   function updateProgress(){const phaseCount=[1,2,3,4].filter(p=>state.phases[p]).length;const extras=(state.activities.pitch?1:0)+(state.activities.mistakes?1:0)+(state.completed?1:0);const count=phaseCount+extras,total=7;document.querySelector('[data-progress-fill]').style.width=`${count/total*100}%`;document.querySelector('[data-progress-count]').textContent=`${count} of ${total} activities complete`;document.querySelector('[data-progress-title]').textContent=state.completed?'Plan complete • Start your 48 hours':phaseCount<4?`Build your plan • Phase ${Math.min(phaseCount+1,4)} of 4`:'Finish your networking introduction and challenge';document.querySelectorAll('[data-phase]').forEach(sec=>{const p=sec.dataset.phase,done=!!state.phases[p];sec.classList.toggle('is-complete',done);sec.querySelector('[data-status]').textContent=done?'Complete ✓':'Not complete'});document.querySelector('[data-completion]').classList.toggle('show',!!state.completed)}
-  function updateAll(){updatePreviews();updateProgress();document.querySelector('[data-plan-output]').innerHTML=makePlan();renderMistake();const done=Object.values(state.planTasks||{}).filter(v=>v?.status==='complete'&&v?.completedDate).length;const btn=document.querySelector('[data-finish]');const planReady=[1,2,3,4].every(p=>!!state.phases[p]);btn.disabled=!planReady&&!state.completed;btn.title=btn.disabled?'Finish the four planning phases to generate your action plan.':'';btn.style.opacity=btn.disabled?'.55':'1';document.querySelector('[data-save-feedback]').textContent=state.completed?'Your BOOST planning module is complete. Continue working on your action checklist at your own pace.':planReady?'Your 48-hour plan is ready. You can complete this BOOST module now; '+done+' of 12 follow-through actions are marked complete.':'Finish the four planning phases to generate your checklist. Completing the real-world actions is not required before meeting your coach.';}
+  function updateAll(){
+    updatePreviews();updateProgress();document.querySelector('[data-plan-output]').innerHTML=makePlan();renderMistake();
+    const ready=state.completed||[1,2,3,4].every(p=>!!state.phases[p]);
+    const view=document.querySelector('[data-view-checklist]');
+    const output=document.querySelector('[data-plan-output]');
+    const toolbar=document.querySelector('.plan-toolbar');
+    if(!ready)checklistOpen=false;
+    view.hidden=!ready;
+    view.setAttribute('aria-expanded',String(ready&&checklistOpen));
+    view.textContent=checklistOpen?'Hide My 48-Hour Checklist':'View My 48-Hour Checklist';
+    output.classList.toggle('checklist-collapsed',!checklistOpen);
+    toolbar.classList.toggle('checklist-collapsed',!checklistOpen);
+    const btn=document.querySelector('[data-finish]');
+    btn.disabled=!ready;
+    btn.title=ready?'Complete the BOOST planning module and return to your pathway.':'Complete all four planning phases first.';
+    btn.style.opacity=ready?'1':'.55';
+    document.querySelector('[data-save-feedback]').textContent=ready?
+      'Your plan is ready. View or print the checklist whenever you choose, or complete this BOOST module and return to Coach Appointment Prep. The 12 follow-through tasks can be worked on later.':
+      'Your answers save automatically. Finish the four planning phases to view your checklist and complete the BOOST module.';
+  }
 
-  document.querySelector('[data-view-checklist]').addEventListener('click',()=>document.querySelector('[data-plan-output]').scrollIntoView({behavior:'smooth',block:'start'}));
-  document.querySelector('[data-finish]').addEventListener('click',()=>{const missing=[1,2,3,4].filter(p=>!state.phases[p]);if(missing.length){showToast(`Complete Phase${missing.length>1?'s':''} ${missing.join(', ')} first.`);document.getElementById(`phase${missing[0]}`).scrollIntoView({behavior:'smooth'});return}state.completed=true;state.completedAt=state.completedAt||new Date().toISOString();state.activities.plan=true;save();let ps={complete:{},pathway:'rapid'};try{ps=JSON.parse(localStorage.getItem(PATHWAY_KEY)||localStorage.getItem(LEGACY_PATHWAY_KEY)||'null')||ps}catch(e){}ps.complete=ps.complete||{};ps.complete['m:jobsearch']=true;ps.pathway='rapid';localStorage.setItem(PATHWAY_KEY,JSON.stringify(ps));showToast('Your 48-hour plan is ready. Save the completion to BOOST to unlock Coach Appointment Prep.');boostOfferCompletion('jobsearch',document.getElementById('plan'));const returnButton=document.getElementById('boostSaveReturn');if(returnButton)returnButton.click();else{showToast('Plan saved; BOOST confirmation requires a valid launch.');document.querySelector('[data-save-feedback]').textContent='The plan is saved. Open this module from BOOST and select Complete & Return again to confirm completion.';}});
+  document.querySelector('[data-view-checklist]').addEventListener('click',()=>{
+    checklistOpen=!checklistOpen;
+    updateAll();
+    if(checklistOpen)document.querySelector('[data-plan-output]').scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  document.querySelector('[data-finish]').addEventListener('click',()=>{
+    const missing=[1,2,3,4].filter(p=>!state.phases[p]);
+    if(missing.length&&!state.completed){
+      showToast('Finish all four planning phases first.');
+      document.getElementById('phase'+missing[0]).scrollIntoView({behavior:'smooth'});
+      return;
+    }
+    state.completed=true;
+    state.completedAt=state.completedAt||new Date().toISOString();
+    state.activities.plan=true;
+    save();
+    const ps=(()=>{try{return JSON.parse(localStorage.getItem(PATHWAY_KEY)||localStorage.getItem(LEGACY_PATHWAY_KEY)||'null')||{}}catch{return {}}})();
+    ps.complete=ps.complete||{};
+    ps.complete['m:jobsearch']=true;
+    ps.pathway='rapid';
+    localStorage.setItem(PATHWAY_KEY,JSON.stringify(ps));
+    try{
+      boostReturnCompletion('jobsearch');
+    }catch(err){
+      console.error('BOOST completion return failed',err);
+      document.querySelector('[data-save-feedback]').textContent='Your plan is saved, but the BOOST return failed: '+err.message+'. Try Complete Module & Return again.';
+      showToast('Return failed; your plan is preserved.');
+    }
+  });
   function saveDraftProgress(){
     // Preserve the original learning-state key for resume; draft evidence must not mark completion.
     state.updatedAt=new Date().toISOString();
@@ -449,21 +498,35 @@ body{font-size:16px}
     if(toggle)toggle.addEventListener('click',()=>{captionsOn=!captionsOn;toggle.classList.toggle('is-on',captionsOn);toggle.setAttribute('aria-pressed',String(captionsOn));toggle.textContent=captionsOn?'CC On':'CC Off';renderCue()});
   });
   updateAll();
-  if(state.completed)boostOfferCompletion('jobsearch',document.getElementById('plan'));
 })();
 
-function boostOfferCompletion(moduleId,mount){
- const p=new URLSearchParams(location.search),requested=p.get('boost_module');
- const nonce=p.get('boost_nonce')||sessionStorage.getItem('boost_completion_nonce:'+moduleId);
- if((requested&&requested!==moduleId)||!mount)return;
- const returnUrl=p.get('boost_return')||'https://pinalworkforce1-del.github.io/BOOST_Pathway-Portal/?boost2_path=rapid';
- let target;
- try{target=new URL(returnUrl,location.href);if(target.origin!==location.origin)throw Error('Unexpected origin')}catch(_){target=new URL('https://pinalworkforce1-del.github.io/BOOST_Pathway-Portal/?boost2_path=rapid')}
- if(!nonce){let warning=document.getElementById('boostCompletionReturn');if(!warning){warning=document.createElement('div');warning.id='boostCompletionReturn';mount.appendChild(warning)}warning.textContent='Your plan is saved. Reopen this module from the BOOST Rapid Reemployment pathway to confirm completion.';return;}
- let box=document.getElementById('boostCompletionReturn');
- if(!box){box=document.createElement('div');box.id='boostCompletionReturn';box.style.cssText='margin:20px 0;padding:20px;border:3px solid #16835b;border-radius:16px;background:#effff7;text-align:center';mount.appendChild(box)}
- box.innerHTML='<h3 style="margin:0 0 8px">Activity Complete</h3><p style="margin:0 0 14px">Return to BOOST Pathways to save this completion and unlock your next step.</p><button type="button" id="boostSaveReturn" style="padding:13px 20px;border:0;border-radius:10px;background:#0d6248;color:#fff;font-weight:900;cursor:pointer">Save Completion & Return to BOOST</button>';
- document.getElementById('boostSaveReturn').onclick=function(){const saved=JSON.parse(localStorage.getItem('pinal_boost_journey_v1')||'{}');const evidence=saved.modules?.jobsearch;if(!evidence?.completedAt){alert('Finish all four phases and start your 48-hour plan before saving completion to BOOST.');return;}sessionStorage.setItem('boost_completion_payload:jobsearch',JSON.stringify(evidence));target.searchParams.set('boost_complete',moduleId);target.searchParams.set('boost_nonce',nonce);location.assign(target.toString())};
+function boostReturnCompletion(moduleId){
+  // SessionStorage is shared between both GitHub Pages paths on this origin.
+  // The BOOST portal validates this receipt against its authenticated session.
+  const root='https://pinalworkforce1-del.github.io/BOOST_Pathway-Portal/';
+  const params=new URLSearchParams(location.search);
+  const requested=params.get('boost_module');
+  if(requested&&requested!==moduleId)throw Error('The launch identifies a different module');
+  let target;
+  try{
+    target=new URL(params.get('boost_return')||root,location.href);
+    if(target.origin!==location.origin||!target.pathname.startsWith('/BOOST_Pathway-Portal/'))throw Error('Invalid return path');
+  }catch(_){target=new URL(root)}
+  const j=JSON.parse(localStorage.getItem('pinal_boost_journey_v1')||'{}');
+  const evidence=j.modules?.jobsearch;
+  if(!evidence?.completedAt)throw Error('Completion evidence was not saved');
+  const nonceKey='boost_completion_nonce:'+moduleId;
+  let nonce=params.get('boost_nonce')||sessionStorage.getItem(nonceKey);
+  if(!nonce){
+    nonce=Array.from(crypto.getRandomValues(new Uint8Array(24)),n=>n.toString(16).padStart(2,'0')).join('');
+  }
+  sessionStorage.setItem(nonceKey,nonce);
+  sessionStorage.setItem('boost_completion_payload:'+moduleId,JSON.stringify(evidence));
+  target.searchParams.set('boost_complete',moduleId);
+  target.searchParams.set('boost_nonce',nonce);
+  target.searchParams.set('boost2_path','rapid');
+  target.searchParams.set('boost2_from','jobsearch');
+  location.assign(target.toString());
 }
 
 </script>
