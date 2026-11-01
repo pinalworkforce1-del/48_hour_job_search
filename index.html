@@ -305,7 +305,12 @@ body{font-size:16px}
   // On return from BOOST, restore the saved draft when the browser-only module state is absent.
   try{
     const journey=JSON.parse(localStorage.getItem(JOURNEY_KEY)||'{}');
-    const draft=journey.modules?.jobsearchDraft?.state;
+    // A custom-domain BOOST portal can pass a cloud-saved draft in a URL fragment.
+    const fragment=new URLSearchParams(location.hash.replace(/^#/, ''));
+    let transferredDraft=null;
+    try{transferredDraft=JSON.parse(fragment.get('boost_draft_state')||'null')}catch(e){}
+    const draft=(transferredDraft?.state?.values&&transferredDraft?.state?.lists?
+      transferredDraft.state:journey.modules?.jobsearchDraft?.state);
     const hasWork=Object.values(state.phases||{}).some(Boolean)||
       Object.values(state.values||{}).some(v=>String(v||'').trim())||
       Object.values(state.lists||{}).some(v=>Array.isArray(v)&&v.some(x=>String(x||'').trim()));
@@ -473,7 +478,17 @@ body{font-size:16px}
       saveDraftProgress();
       const params=new URLSearchParams(location.search),fallback='https://pinalworkforce1-del.github.io/BOOST_Pathway-Portal/';
       const target=new URL(params.get('boost_return')||fallback,location.href);
-      if(target.origin!==location.origin)throw Error('Unrecognized BOOST return address');
+      const official=(target.hostname==='pinal.boostpathways.org'&&['/','/index.html'].includes(target.pathname))||
+        (target.hostname==='pinalworkforce1-del.github.io'&&target.pathname.startsWith('/BOOST_Pathway-Portal/'));
+      if(target.protocol!=='https:'||!official)throw Error('Unrecognized BOOST return address');
+      if(target.origin!==location.origin){
+        const nonce=params.get('boost_nonce');
+        if(!nonce)throw Error('Missing BOOST session handoff. Return through the pathway portal to save to the cloud.');
+        target.hash='boost_handoff='+encodeURIComponent(JSON.stringify({
+          kind:'draft',module:'jobsearch',nonce,
+          draft:readJourney().modules?.jobsearchDraft
+        }));
+      }
       target.searchParams.set('boost_draft','jobsearch');
       target.searchParams.set('boost2_path','rapid');
       target.searchParams.set('boost2_from','jobsearch');
@@ -501,27 +516,31 @@ body{font-size:16px}
 })();
 
 function boostReturnCompletion(moduleId){
-  // SessionStorage is shared between both GitHub Pages paths on this origin.
-  // The BOOST portal validates this receipt against its authenticated session.
   const root='https://pinalworkforce1-del.github.io/BOOST_Pathway-Portal/';
   const params=new URLSearchParams(location.search);
   const requested=params.get('boost_module');
   if(requested&&requested!==moduleId)throw Error('The launch identifies a different module');
-  let target;
-  try{
-    target=new URL(params.get('boost_return')||root,location.href);
-    if(target.origin!==location.origin||!target.pathname.startsWith('/BOOST_Pathway-Portal/'))throw Error('Invalid return path');
-  }catch(_){target=new URL(root)}
+  const target=new URL(params.get('boost_return')||root,location.href);
+  const official=(target.hostname==='pinal.boostpathways.org'&&['/','/index.html'].includes(target.pathname))||
+    (target.hostname==='pinalworkforce1-del.github.io'&&target.pathname.startsWith('/BOOST_Pathway-Portal/'));
+  if(target.protocol!=='https:'||!official)throw Error('Unrecognized BOOST return address');
   const j=JSON.parse(localStorage.getItem('pinal_boost_journey_v1')||'{}');
   const evidence=j.modules?.jobsearch;
   if(!evidence?.completedAt)throw Error('Completion evidence was not saved');
   const nonceKey='boost_completion_nonce:'+moduleId;
-  let nonce=params.get('boost_nonce')||sessionStorage.getItem(nonceKey);
-  if(!nonce){
-    nonce=Array.from(crypto.getRandomValues(new Uint8Array(24)),n=>n.toString(16).padStart(2,'0')).join('');
+  const nonce=params.get('boost_nonce')||sessionStorage.getItem(nonceKey);
+  if(!nonce)throw Error('BOOST session is missing. Reopen the saved activity from the authenticated BOOST pathway to confirm completion.');
+  if(target.origin===location.origin){
+    sessionStorage.setItem(nonceKey,nonce);
+    sessionStorage.setItem('boost_completion_payload:'+moduleId,JSON.stringify(evidence));
+  }else{
+    // The custom domain cannot read GitHub Pages sessionStorage.
+    // Transfer evidence in the fragment and validate the original launch nonce
+    // plus the authenticated user on the BOOST portal before cloud writes.
+    target.hash='boost_handoff='+encodeURIComponent(JSON.stringify({
+      kind:'completion',module:moduleId,nonce,evidence
+    }));
   }
-  sessionStorage.setItem(nonceKey,nonce);
-  sessionStorage.setItem('boost_completion_payload:'+moduleId,JSON.stringify(evidence));
   target.searchParams.set('boost_complete',moduleId);
   target.searchParams.set('boost_nonce',nonce);
   target.searchParams.set('boost2_path','rapid');
