@@ -62,6 +62,22 @@ body{font-size:16px}
 .rosie-coach-card p,.rosie-coach-card .eyebrow{font-size:.93rem}
 .phase-actions .btn,.activity .btn{font-size:1rem}
 @media(max-width:620px){.activity p,.lesson-body p{font-size:.98rem}.activity label,.checklist label{font-size:.96rem}}
+
+/* Action-oriented 48-hour printable plan */
+.action-intro{font-size:1rem;line-height:1.6;margin:6px 0 12px}
+.action-header,.action-row{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.action-header{background:#e7f0f5;padding:10px 12px;font-size:.84rem;font-weight:800;color:#184866}
+.action-row{padding:13px 12px;border-bottom:1px solid #dce5ea;font-size:.94rem;line-height:1.5}
+.action-row:nth-of-type(odd){background:#f8fafb}
+.action-main strong{font-weight:700}
+.action-when{font-size:.79rem;font-weight:850;color:#23678d;margin-bottom:4px}
+.action-reminder{margin-top:7px;color:#526673;font-size:.88rem}
+.action-who{font-weight:650;overflow-wrap:anywhere}
+.action-track{display:grid;gap:6px}
+.action-track label{display:grid;gap:3px;font-size:.8rem;font-weight:750}
+.action-track select,.action-track input{min-width:0;width:100%;padding:7px;border:1px solid #b8cbd7;border-radius:7px;font-size:.9rem;background:white}
+@media(max-width:720px){.action-header{display:none}.action-row{grid-template-columns:1fr;gap:8px}.action-who:before{content:'Who / where: ';font-weight:850}.action-track{grid-template-columns:1fr 1fr}}
+@media print{.action-track select,.action-track input{border:1px solid #aabac6}.action-row{break-inside:avoid}.action-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style>
 </head>
 <body>
@@ -281,8 +297,8 @@ body{font-size:16px}
   const JOURNEY_KEY='pinal_boost_journey_v1';
   const PATHWAY_KEY='boostPathwaysV29';
   const LEGACY_PATHWAY_KEY='boostPathwaysV28';
-  let state={values:{},lists:{skills:['','',''],accomplishments:['',''],contacts:['','','','',''],employers:['','','']},checks:{},phases:{},activities:{pitch:false,mistakes:false,plan:false},mistakeIndex:0,mistakeDone:[false,false,false,false,false],completed:false};
-  try{const saved=JSON.parse(localStorage.getItem(MODULE_KEY)||'null');if(saved)state={...state,...saved,values:{...state.values,...(saved.values||{})},lists:{...state.lists,...(saved.lists||{})},checks:{...state.checks,...(saved.checks||{})},phases:{...state.phases,...(saved.phases||{})},activities:{...state.activities,...(saved.activities||{})}}}catch(e){}
+  let state={values:{},lists:{skills:['','',''],accomplishments:['',''],contacts:['','','','',''],employers:['','','']},checks:{},phases:{},activities:{pitch:false,mistakes:false,plan:false},mistakeIndex:0,mistakeDone:[false,false,false,false,false],completed:false,planTasks:{}};
+  try{const saved=JSON.parse(localStorage.getItem(MODULE_KEY)||'null');if(saved)state={...state,...saved,values:{...state.values,...(saved.values||{})},lists:{...state.lists,...(saved.lists||{})},checks:{...state.checks,...(saved.checks||{})},phases:{...state.phases,...(saved.phases||{})},activities:{...state.activities,...(saved.activities||{})},planTasks:{...(saved.planTasks||{})}}}catch(e){}
   const toast=document.querySelector('.toast');let toastTimer;
   function showToast(msg){clearTimeout(toastTimer);toast.textContent=msg;toast.classList.add('show');toastTimer=setTimeout(()=>toast.classList.remove('show'),2300)}
   function readJourney(){try{return JSON.parse(localStorage.getItem(JOURNEY_KEY)||'{}')||{}}catch{return{}}}
@@ -323,45 +339,53 @@ body{font-size:16px}
   }
   function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]))}
   function makePlan(){
-    const name=val('participantName')||'Participant',role=val('targetRole')||'My target role';const skills=nonempty(state.lists.skills),acc=nonempty(state.lists.accomplishments),contacts=nonempty(state.lists.contacts),emps=nonempty(state.lists.employers);
-    const resume=[val('resumeAction'),val('resumeWork'),val('resumeResult')].filter(Boolean).join(' ');const pitch=[val('pitchWho'),val('pitchBest'),val('pitchLooking'),val('pitchAsk')].filter(Boolean).join(' ');
-    const phasesDone=[1,2,3,4].filter(p=>state.phases[p]).length;const any=Object.keys(state.values).some(k=>val(k))||skills.length||contacts.length||emps.length||phasesDone;
-    if(!any)return '<div class="plan-empty">Complete the activities above and your personalized plan will appear here.</div>';
-    const show=(v,fallback)=>escapeHtml(String(v||fallback));
-    const items=arr=>arr.length?arr.map(x=>'<li>'+escapeHtml(x)+'</li>').join(''):'';
-    const phase=(title,purpose,tasks)=>'<div class="plan-phase"><h4>'+title+'</h4><p style="font-size:1rem;line-height:1.55;margin:7px 0 10px">'+purpose+'</p><ol style="padding-left:24px;font-size:.98rem;line-height:1.65">'+tasks.map(x=>'<li style="margin-bottom:9px">'+x+'</li>').join('')+'</ol></div>';
-    const kickoff=val('actionStart')||'Choose a specific starting time today or tomorrow.';
-    const selectedSkills=skills.length?skills.slice(0,3).join(', '):'choose three strengths you can show an employer';
-    const targetEmployers=emps.length?emps.join(', '):'identify three employers hiring for '+role;
-    const people=contacts.length?contacts.slice(0,3).join(', '):'identify three people you can contact';
-    const resumeBullet=resume||'Write one accomplishment using an action, what you did, and a result; use a real number only when available';
-    const firstContact=val('outreachName')||contacts[0]||'your first professional contact';
-    const ask=val('outreachAsk')||'ask about openings, referrals, or an introduction';
-    const tracking=[val('trackCompany'),val('trackRole'),val('trackContact')].filter(Boolean).join(' — ')||'the first employer and position you contact';
-    return '<div class="plan-title"><h3>'+escapeHtml(name)+' — My 48-Hour Job Search Action Plan</h3><p><strong>Target occupation:</strong> '+escapeHtml(role)+' · '+phasesDone+' of 4 preparation phases completed</p><p style="margin-top:6px">Start: '+show(kickoff,'Set a start time')+'. Work through the actions below over your first 48 hours.</p></div>'+
-      phase('Hours 0–8 — Get organized and ready','Start at your committed time. Gather what you already know, identify people who can help, and set your immediate job-search direction.',[
-        '<strong>At the start:</strong> '+show(kickoff,'Set a definite starting time')+'. Put the next eight hours on your calendar.',
-        '<strong>During the first two hours:</strong> Prepare three skills you can discuss in an interview: '+escapeHtml(selectedSkills)+'. '+(acc.length?'Use these accomplishments as evidence: '+escapeHtml(acc.join(' • '))+'.':'Add two real accomplishments that demonstrate your strengths.'),
-        '<strong>Before hour 8:</strong> Make a contact list: '+escapeHtml(people)+'. Decide who to approach first and why.'
-      ])+
-      phase('Hours 8–20 — Prepare materials and shortlist jobs','Turn your experience into a résumé employers can scan quickly, review your online information, and locate openings worth pursuing.',[
-        '<strong>Hours 8–11:</strong> Update your résumé contact information and tailor it for '+escapeHtml(role)+'. Your accomplishment bullet: '+escapeHtml(resumeBullet)+'.',
-        '<strong>Hours 11–14:</strong> Check your online profile, dates, job titles, and public-facing information for consistency.',
-        '<strong>Hours 14–20:</strong> Search openings at '+escapeHtml(targetEmployers)+'. Save links, check pay and commute, and select the best-fit positions for applications.'
-      ])+
-      phase('Hours 20–36 — Apply and make connections','Focus on quality applications and direct outreach rather than simply sending as many applications as possible.',[
-        '<strong>Hours 20–27:</strong> Submit tailored applications to your best-fit openings and record the employer, role, date and next action.',
-        '<strong>Hours 27–31:</strong> Contact '+escapeHtml(firstContact)+' and '+escapeHtml(people)+'. Your ask: '+escapeHtml(ask)+'.',
-        '<strong>Hours 31–36:</strong> Reach out to '+show(val('recruiterTarget'),'a recruiter, staffing agency, or your career coach')+'. Practice and use this introduction: '+show(pitch,'I have experience in this work, I am seeking a matching role, and I would appreciate a hiring lead or introduction')+'.'
-      ])+
-      phase('Hours 36–48 — Track, follow up, and commit','Build a simple repeatable system to maintain momentum after your first two days.',[
-        '<strong>Hours 36–40:</strong> Start your application tracker with '+escapeHtml(tracking)+'. Include the application date, employer contact and next follow-up.',
-        '<strong>Hours 40–44:</strong> Plan your next follow-up for '+show(val('trackFollow'),'a realistic date after applying')+'. Review responses and any hiring barriers.',
-        '<strong>Hours 44–48:</strong> Set a sustainable daily routine: '+show(val('dailyRoutine')||val('routineCustom'),'a daily block for applications, networking and résumé improvement')+'. Your weekly targets: '+show(val('weeklyApps'),'set a target number of')+' targeted applications, '+show(val('weeklyConvos'),'set a target number of')+' conversations, and '+show(val('weeklyLearning'),'set a target number of')+' learning actions.',
-        '<strong>Before you finish:</strong> Arrange accountability with '+show(val('accountability'),'a career coach or trusted contact')+'.'
-      ])+
-      '<div class="plan-phase"><h4>My first action in the next 24 hours</h4><p style="font-size:1rem;line-height:1.6"><strong>'+show(val('commitment'),'Write one specific, time-bound action before finishing your plan.')+'</strong></p><p>When you complete it, record the outcome and decide your next action.</p></div>';
+    const name=val('participantName')||'Participant',role=val('targetRole')||'your target occupation';
+    const skills=nonempty(state.lists.skills),people=nonempty(state.lists.contacts),employers=nonempty(state.lists.employers);
+    const accomplishment=[val('resumeAction'),val('resumeWork'),val('resumeResult')].filter(Boolean).join(' ');
+    const pitch=[val('pitchWho'),val('pitchBest'),val('pitchLooking'),val('pitchAsk')].filter(Boolean).join(' ');
+    const tasks=[];
+    const add=(id,phase,when,action,who,reminder)=>tasks.push({id,phase,when,action,who,reminder});
+    add('start',1,'Hours 0–2','Begin your search at '+(val('actionStart')||'a specific time you choose')+'. Set aside time and decide which jobs fit your needs.','You','Put the starting time on your calendar.');
+    add('skills',1,'Hours 2–4','Prepare examples of your transferable skills: '+(skills.slice(0,3).join(', ')||'identify three strengths to describe to employers')+'.','You','Connect each skill to something you actually did.');
+    add('network',1,'Hours 4–8','List five people to contact over the next few days. Ask about employers hiring for '+role+', potential referrals, and who else you should speak with.',people.slice(0,5).join(' • ')||'Add five professional or personal contacts','Start with a brief message. Do not ask everyone for a job; ask for leads and introductions.');
+    add('resume',2,'Hours 8–11','Update and target your résumé for '+role+'. '+(accomplishment?'Use this accomplishment: '+accomplishment+'.':'Write one accomplishment describing what you did and the result.'),'You','Check phone/email, recent experience, dates, and keywords from the job posting.');
+    add('presence',2,'Hours 11–14','Review your online profile and make sure public details match your résumé.','You','Search your own name and review the first results an employer may see.');
+    add('employers',2,'Hours 14–20','Look for open positions, compare pay, commute and qualifications, and shortlist roles to apply for.',employers.join(' • ')||'Choose three employers','Record each employer, job title, posting link and closing date.');
+    add('apply',3,'Hours 20–27','Submit tailored applications to well-matched positions.','Employers on your shortlist','Track the application date, contact information and next action.');
+    add('outreach',3,'Hours 27–31','Contact people on your list to discuss current openings and ask for an introduction. '+(val('outreachAsk')?'Your specific ask: '+val('outreachAsk')+'.':'Ask whether they know a hiring manager or employer seeking your skills.'),val('outreachName')||people.slice(0,5).join(' • ')||'Your network','Use a short introduction'+(pitch?': '+pitch:'. Explain what you bring and the role you want.') );
+    add('recruiter',3,'Hours 31–36','Contact a recruiter or staffing representative and ask about immediate openings.',val('recruiterTarget')||'Career coach / staffing agency','Request one specific next step or hiring lead.');
+    add('tracker',4,'Hours 36–40','Build your application tracker, beginning with '+([val('trackCompany'),val('trackRole')].filter(Boolean).join(' — ')||'your first application')+'.',val('trackContact')||'Employer contact','Capture dates, application status, next contact and outcomes.');
+    add('followup',4,'Hours 40–44','Schedule follow-ups on applications and conversations.',people.slice(0,3).join(' • ')||'Employers and people you contacted','Next follow-up: '+(val('trackFollow')||'select a realistic date')+'.');
+    add('routine',4,'Hours 44–48','Establish a repeatable routine: '+(val('dailyRoutine')||val('routineCustom')||'a daily block for applications, networking and skill-building')+'.',val('accountability')||'Your career coach or accountability partner','Weekly goals: '+(val('weeklyApps')||'set a target for')+' applications, '+(val('weeklyConvos')||'set a target for')+' conversations and '+(val('weeklyLearning')||'set a target for')+' learning activities.');
+    state.planTasks=state.planTasks||{};
+    const row=t=>{
+      const p=state.planTasks[t.id]||{},status=p.status||'incomplete',date=p.completedDate||'';
+      return '<div class="action-row"><div class="action-main"><div class="action-when">'+escapeHtml(t.when)+'</div><strong>'+escapeHtml(t.action)+'</strong><div class="action-reminder">Reminder: '+escapeHtml(t.reminder)+'</div></div>'+
+       '<div class="action-who">'+escapeHtml(t.who)+'</div>'+
+       '<div class="action-track"><label>Status<select data-action-status="'+t.id+'"><option value="incomplete"'+(status==='incomplete'?' selected':'')+'>Incomplete</option><option value="in-progress"'+(status==='in-progress'?' selected':'')+'>In progress</option><option value="complete"'+(status==='complete'?' selected':'')+'>Complete</option></select></label><label>Date completed<input type="date" data-action-date="'+t.id+'" value="'+escapeHtml(date)+'"></label></div></div>';
+    };
+    const phases=[
+      ['Hours 0–8 — Get ready','Establish your starting point, identify your strengths and make a realistic outreach list.'],
+      ['Hours 8–20 — Prepare and target','Get your résumé ready and identify jobs you would actually accept.'],
+      ['Hours 20–36 — Apply and connect','Act on the best opportunities, ask for leads and make direct contact.'],
+      ['Hours 36–48 — Track and follow through','Create a sustainable system for applications, follow-ups and accountability.']
+    ];
+    const complete=tasks.filter(t=>state.planTasks[t.id]?.status==='complete').length;
+    return '<div class="plan-title"><h3>'+escapeHtml(name)+' — My 48-Hour Job Search Action Tracker</h3><p>Target: '+escapeHtml(role)+' · '+complete+' of '+tasks.length+' actions completed</p><p>Use each action as a checklist. Set its status and completion date as you work through the next 48 hours.</p></div>'+
+      phases.map(([title,intro],i)=>'<section class="plan-phase"><h4>'+title+'</h4><p class="action-intro">'+intro+'</p><div class="action-header"><span>What to do / when</span><span>Who / where</span><span>Progress / date</span></div>'+tasks.filter(t=>t.phase===i+1).map(row).join('')+'</section>').join('')+
+      '<div class="plan-phase"><h4>My first commitment</h4><p class="action-intro">'+escapeHtml(val('commitment')||'Write one specific action you will take in the next 24 hours.')+'</p></div>';
   }
+  document.querySelector('[data-plan-output]').addEventListener('change',e=>{
+    const status=e.target.closest('[data-action-status]'),date=e.target.closest('[data-action-date]');
+    if(!status&&!date)return;
+    const id=status?.dataset.actionStatus||date?.dataset.actionDate;
+    state.planTasks=state.planTasks||{};
+    const entry=state.planTasks[id]||{status:'incomplete',completedDate:''};
+    if(status){entry.status=status.value;if(status.value==='complete'&&!entry.completedDate)entry.completedDate=new Date().toISOString().slice(0,10);if(status.value!=='complete')entry.completedDate='';}
+    if(date){entry.completedDate=date.value;if(date.value)entry.status='complete';}
+    state.planTasks[id]=entry;save();
+  });
+
   function updateProgress(){const phaseCount=[1,2,3,4].filter(p=>state.phases[p]).length;const extras=(state.activities.pitch?1:0)+(state.activities.mistakes?1:0)+(state.completed?1:0);const count=phaseCount+extras,total=7;document.querySelector('[data-progress-fill]').style.width=`${count/total*100}%`;document.querySelector('[data-progress-count]').textContent=`${count} of ${total} activities complete`;document.querySelector('[data-progress-title]').textContent=state.completed?'Plan complete • Start your 48 hours':phaseCount<4?`Build your plan • Phase ${Math.min(phaseCount+1,4)} of 4`:'Finish your networking introduction and challenge';document.querySelectorAll('[data-phase]').forEach(sec=>{const p=sec.dataset.phase,done=!!state.phases[p];sec.classList.toggle('is-complete',done);sec.querySelector('[data-status]').textContent=done?'Complete ✓':'Not complete'});document.querySelector('[data-completion]').classList.toggle('show',!!state.completed)}
   function updateAll(){updatePreviews();updateProgress();document.querySelector('[data-plan-output]').innerHTML=makePlan();renderMistake()}
 
