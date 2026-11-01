@@ -7,12 +7,15 @@ const read=(k,fb={})=>{try{return JSON.parse(localStorage.getItem(k)||'null')||f
 const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 function mobilityEvidence(){
  const j=read(JOURNEY_KEY,{}),m=j.modules?.skillmobility;
- if(m?.confirmedSkills?.length)return m;
+ if(m&&(m.confirmedSkills?.length||m.confirmedPriorSkillIds?.length||m.skillAssessment))return m;
  const p=read(PLAN_KEY,{});
  return p?.confirmedSkills?.length?p:null;
 }
 function rankedSkills(src){
- const raw=(src?.confirmedSkills||[]).map((x,i)=>({label:String(typeof x==='string'?x:(x?.label||'')).trim(),i})).filter(x=>x.label);
+ const labels={communication:'Communication',customer:'Customer service',numbers:'Handling transactions and numbers',teamwork:'Teamwork and collaboration',accuracy:'Accuracy and attention to detail',adaptability:'Adaptability',problem:'Problem solving',people:'Working with people',detail:'Attention to detail',digital:'Digital skills',lead:'Leadership',hands:'Hands-on work'};
+ const assessed=src?.skillAssessment;
+ const confirmed=[...(src?.confirmedSkills||[]),...(Array.isArray(assessed?.confirmedSkills)?assessed.confirmedSkills:[]),...(src?.confirmedPriorSkillIds||[])];
+ const raw=confirmed.map((x,i)=>{const value=String(typeof x==='string'?x:(x?.label||x?.name||x?.skill||'')).trim();return {label:labels[value]||(/^[a-z][a-z0-9_]{1,15}$/.test(value)?'':value),i}}).filter(x=>x.label);
  const freq=new Map();
  for(const c of src?.selectedCareers||[]){for(const label of c?.skills?.transfer||[]){const k=norm(label);if(k)freq.set(k,(freq.get(k)||0)+1)}}
  const seen=new Set();
