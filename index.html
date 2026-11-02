@@ -529,28 +529,25 @@ function boostReturnCompletion(moduleId){
   if(!evidence?.completedAt)throw Error('Completion evidence was not saved');
   const nonceKey='boost_completion_nonce:'+moduleId;
   const nonce=params.get('boost_nonce')||sessionStorage.getItem(nonceKey);
-  // Existing completed plans may have been opened in a tab without launch parameters.
-  // Return them for explicit participant confirmation on the authenticated portal.
-  if(!nonce){
-    const recovery=new URL('https://pinal.boostpathways.org/');
+  // The 48-Hour activity is hosted on a different site from the authenticated
+  // custom BOOST domain. Storage and session data cannot cross that boundary.
+  // Use an explicit signed-in completion review, with the saved evidence.
+  // This also recovers already completed activity tabs with no launch nonce.
+  if(target.origin!==location.origin||!nonce){
+    const recovery=target.origin!==location.origin?target:new URL('https://pinal.boostpathways.org/');
+    recovery.searchParams.delete('boost_complete');
+    recovery.searchParams.delete('boost_nonce');
     recovery.searchParams.set('boost2_path','rapid');
     recovery.searchParams.set('boost2_from','jobsearch');
     recovery.searchParams.set('boost_recover','jobsearch');
-    recovery.hash='boost_recovery='+encodeURIComponent(JSON.stringify({module:moduleId,evidence}));
+    recovery.hash='boost_recovery='+encodeURIComponent(JSON.stringify({
+      module:moduleId,source:'pinal_48_hour_job_search',evidence
+    }));
     location.assign(recovery.toString());
     return;
   }
-  if(target.origin===location.origin){
-    sessionStorage.setItem(nonceKey,nonce);
-    sessionStorage.setItem('boost_completion_payload:'+moduleId,JSON.stringify(evidence));
-  }else{
-    // The custom domain cannot read GitHub Pages sessionStorage.
-    // Transfer evidence in the fragment and validate the original launch nonce
-    // plus the authenticated user on the BOOST portal before cloud writes.
-    target.hash='boost_handoff='+encodeURIComponent(JSON.stringify({
-      kind:'completion',module:moduleId,nonce,evidence
-    }));
-  }
+  sessionStorage.setItem(nonceKey,nonce);
+  sessionStorage.setItem('boost_completion_payload:'+moduleId,JSON.stringify(evidence));
   target.searchParams.set('boost_complete',moduleId);
   target.searchParams.set('boost_nonce',nonce);
   target.searchParams.set('boost2_path','rapid');
