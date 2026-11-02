@@ -529,7 +529,17 @@ function boostReturnCompletion(moduleId){
   if(!evidence?.completedAt)throw Error('Completion evidence was not saved');
   const nonceKey='boost_completion_nonce:'+moduleId;
   const nonce=params.get('boost_nonce')||sessionStorage.getItem(nonceKey);
-  if(!nonce)throw Error('BOOST session is missing. Reopen the saved activity from the authenticated BOOST pathway to confirm completion.');
+  // Existing completed plans may have been opened in a tab without launch parameters.
+  // Return them for explicit participant confirmation on the authenticated portal.
+  if(!nonce){
+    const recovery=new URL('https://pinal.boostpathways.org/');
+    recovery.searchParams.set('boost2_path','rapid');
+    recovery.searchParams.set('boost2_from','jobsearch');
+    recovery.searchParams.set('boost_recover','jobsearch');
+    recovery.hash='boost_recovery='+encodeURIComponent(JSON.stringify({module:moduleId,evidence}));
+    location.assign(recovery.toString());
+    return;
+  }
   if(target.origin===location.origin){
     sessionStorage.setItem(nonceKey,nonce);
     sessionStorage.setItem('boost_completion_payload:'+moduleId,JSON.stringify(evidence));
